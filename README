@@ -18,6 +18,7 @@ However you will need to have Net::Cmd from libnet installed
 COPYRIGHT
 
   © 1995-2001 Graham Barr. All rights reserved.
+  © 2001 Derek J. Balling. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

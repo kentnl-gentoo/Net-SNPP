@@ -1,8 +1,10 @@
 # Net::SNPP.pm
 #
-# Copyright (c) 1995-1997 Graham Barr <gbarr@pobox.com>. All rights reserved.
-# This program is free software; you can redistribute it and/or
-# modify it under the same terms as Perl itself.
+# Copyright (c) 1995-2001 Graham Barr. 
+# Copyright (c) 2001 Derek J. Balling <dredd@megacity.org>. 
+# All rights reserved. This program is free software; you can 
+# redistribute it and/or modify it under the same terms as Perl itself.
+#
 
 package Net::SNPP;
 
@@ -16,7 +18,7 @@ use IO::Socket;
 use Net::Cmd;
 use Net::Config;
 
-$VERSION = "1.11"; # $Id: //depot/snpp/lib/Net/SNPP.pm#1 $
+$VERSION = "1.12"; # $Id: SNPP.pm,v 1.3 2001/08/20 23:37:34 dredd Exp $
 @ISA     = qw(Net::Cmd IO::Socket::INET);
 @EXPORT  = (qw(CMD_2WAYERROR CMD_2WAYOK CMD_2WAYQUEUED), @Net::Cmd::EXPORT);
 
@@ -220,10 +222,46 @@ sub subject
  shift->_SUBJ(@_);
 }
 
+sub site
+{
+ @_ == 2 or croak 'usage: $snpp->site( CMD )';
+ shift->_SITE(@_);
+}
+
 sub two_way
 {
  @_ == 1 or croak 'usage: $snpp->two_way()';
  shift->_2WAY();
+}
+
+sub ping
+{
+ @_ == 2 or croak 'usage: $snpp->ping( PAGER_ID )';
+ shift->_PING(@_);
+}
+
+sub noqueue
+{
+ @_ == 1 or croak 'usage: $snpp->noqueue()';
+ shift->_NOQU();
+}
+
+sub expire_time
+{
+ @_ == 2 or croak 'usage: $snpp->expire_time( HOURS )';
+ shift->_EXPT(@_);
+}
+
+sub read_ack
+{
+ @_ == 2 or croak 'usage: $snpp->read_ack( TRUEFALSE )';
+ shift->_ACKR(@_);
+}
+
+sub reply_type
+{
+ @_ == 2 or croak 'usage: $snpp->reply_type( TYPE_CODE )';
+ shift->_RTYP(uc (@_));
 }
 
 sub quit
@@ -234,6 +272,8 @@ sub quit
  $snpp->_QUIT;
  $snpp->close;
 }
+
+
 
 ##
 ## IO/perl methods
@@ -279,7 +319,7 @@ sub _SEND { shift->command("SEND")->response()  == CMD_OK }
 sub _QUIT { shift->command("QUIT")->response()  == CMD_OK }   
 sub _HELP { shift->command("HELP")->response()  == CMD_OK }   
 sub _DATA { shift->command("DATA")->response()  == CMD_MORE }   
-sub _SITE { shift->command("SITE",@_) }   
+sub _SITE { shift->command("SITE",@_)->response() == CMD_OK }   
 
 # Level 2
 
@@ -290,6 +330,17 @@ sub _COVE { shift->command("COVE", @_)->response()  == CMD_OK }
 sub _HOLD { shift->command("HOLD", @_)->response()  == CMD_OK }   
 sub _CALL { shift->command("CALL", @_)->response()  == CMD_OK }   
 sub _SUBJ { shift->command("SUBJ", @_)->response()  == CMD_OK }   
+
+# Level 3
+ sub _2WAY { shift->command("2WAY")->response()  == CMD_OK }   
+ sub _PING { shift->command("PING", @_)->response()  == CMD_OK }   
+ sub _ACKR { shift->command("ACKR", @_)->response()  == CMD_OK }   
+ sub _EXPT { shift->command("EXPT", @_)->response()  == CMD_OK }   
+ sub _KTAG { shift->command("KTAG", @_)->response()  == CMD_OK }   
+ sub _MCRE { shift->command("MCRE", @_)->response()  == CMD_OK }   
+ sub _MSTA { shift->command("MSTA", @_)->response()  == CMD_OK }   
+ sub _NOQU { shift->command("NOQU")->response()  == CMD_OK }   
+ sub _RTYP { shift->command("RTYP", @_)->response()  == CMD_OK }   
 
 # NonStandard
 
@@ -365,9 +416,9 @@ B<Debug> - Enable debugging information
 Example:
 
 
-    $snpp = Net::SNPP->new('snpphost',
-			   Debug => 1,
-			  );
+    $snpp = Net::SNPP->new('snpphost', 
+                           Debug => 1,	  
+                           );
 
 =back
 
@@ -390,6 +441,36 @@ Request help text from the server. Returns the text or undef upon failure
 
 Send the QUIT command to the remote SNPP server and close the socket connection.
 
+=item site ( CMD )
+
+Send a SITE command to the remote SNPP server. site() take a single argument 
+which is the command string to send to the SNPP server. 
+
+=item ping ( PAGER_ID )
+
+Determine if the remote SNPP server is able to contact a given pager ID. 
+(Level 3 command)
+
+=item noqueue ()
+
+Instruct the SNPP server not to queue the two-way request.
+(Level 3 command)
+
+=item expire_time ( HOURS )
+
+Cause the paging request to be canceled if it has not been sent in the 
+specified number of hours. (Level 3 command)
+
+=item read_ack ( TRUEFALSE )
+
+Enable and disable the read acknowledgement notification sent by the pager. 
+(Level 3 command)
+
+=item reply_type ( TYPE_CODE )
+
+Change the type of reply that the page will send back. Valid options are:
+NONE, YESNO, SIMREPLY, MULTICHOICE, and TEXT. (Level 3 command)
+
 =back
 
 =head1 EXPORTS
@@ -405,16 +486,16 @@ RFC1861
 
 =head1 AUTHOR
 
-Graham Barr <gbarr@pobox.com>
+Derek J. Balling <dredd@megacity.org> ( original version by Graham Barr )
 
 =head1 COPYRIGHT
 
-Copyright (c) 1995-1997 Graham Barr. All rights reserved.
-This program is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+Copyright (c) 1995-2001 Graham Barr. (c) 2001 Derek J. Balling. All rights
+reserved. This program is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
 
 =for html <hr>
 
-I<$Id: //depot/snpp/lib/Net/SNPP.pm#1 $>
+I<$Id: SNPP.pm,v 1.3 2001/08/20 23:37:34 dredd Exp $>
 
 =cut

@@ -6,7 +6,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
 use Net::SNPP;
 use Carp;
 
-$VERSION = do { my @r=(q$Revision: 0.1 $=~/\d+/g); sprintf "%d."."%02d"x$#r,@r};
+$VERSION = do { my @r=(q$Revision: 1.1 $=~/\d+/g); sprintf "%d."."%02d"x$#r,@r};
 
 @ISA = qw(Exporter Net::SNPP);
 
