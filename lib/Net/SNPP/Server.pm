@@ -252,7 +252,12 @@ that should return a text command, i.e. "250 OK" and some "defined" value to con
 client loop.  +++If no value is set, the client will be disconnected after
 executing your command.+++ If you need MSTA or KTAG, this
 is the hook you need to implement them.
+
+The subroutine will be passed the command arguments, split on whitespace.
+
  sub my_MSTA_sub {
+    my( $id, $password ) = @_;
+    # ...
     return "250 OK", 1;
  }
  $server->custom_command( "MSTA", \&my_MSTA_sub );
@@ -544,7 +549,7 @@ sub handle_client ($ $) {
                         $client->command( "502 Error! Would Duplicate Previously Entered MCResponse" );
                         next;
                     }
-                    $page->{responses}{$cmd[0]} = $cmd[1];
+                    $page->{responses}{shift @cmd} = join(' ',@cmd);
                     $client->command( "250 Response Added to Transaction" );
             }
             else {

@@ -29,7 +29,7 @@ push( @pids, $pid );
 diag( "test server up and running on $port" );
 
 diag( "attempting to connect to server using Net::SNPP" );
-ok( my $snppclient = Net::SNPP->new( 'localhost', Port => 20444 ),
+ok( my $snppclient = Net::SNPP->new( 'localhost', Port => $port ),
     "connected to server using Net::SNPP client" );
 
 # uncomment the following to turn on Net::SNPP debugging

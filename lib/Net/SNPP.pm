@@ -18,7 +18,7 @@ use IO::Socket;
 use Net::Cmd;
 use Net::Config;
 
-$VERSION = "1.16"; # $Id: SNPP.pm,v 1.8 2003/11/29 22:10:16 tobeya Exp $
+$VERSION = "1.17"; # $Id: SNPP.pm,v 1.9 2004/01/27 22:18:32 tobeya Exp $
 @ISA     = qw(Net::Cmd IO::Socket::INET);
 @EXPORT  = (qw(CMD_2WAYERROR CMD_2WAYOK CMD_2WAYQUEUED), @Net::Cmd::EXPORT);
 
@@ -270,8 +270,9 @@ sub message_status
  @_ == 3 or croak 'usage: $snpp->message_status( Message_Tag, Pass_Code )';
  my $me = shift;
  my @out = ();
- $out[4] = $me->command("MSTA", @_)->response();
- if ($out[4] == CMD_2WAYQUEUED || $out[4] == CMD_2WAYOK || $out[4] == CMD_2WAYERROR)
+ my $resp = $me->command("MSTA", @_)->response();
+ $out[4] = $me->code();
+ if ($resp == CMD_2WAYQUEUED || $resp == CMD_2WAYOK || $resp == CMD_2WAYERROR)
   {
    # 860 <Sequence> <Date&Time> Delivered, Awaiting Read Confirmation
    # this regex doesn't count on every server putting the +/-GMT tag
@@ -339,7 +340,8 @@ sub quit
 sub DESTROY
 {
  my $snpp = shift;
- defined(fileno($snpp)) && $snpp->quit
+ defined(fileno($snpp)) && $snpp->quit;
+ delete ${*$snpp}{'net_snpp_host'};
 }
 
 ##
@@ -616,6 +618,6 @@ and/or modify it under the same terms as Perl itself.
 
 =for html <hr>
 
-I<$Id: SNPP.pm,v 1.8 2003/11/29 22:10:16 tobeya Exp $>
+I<$Id: SNPP.pm,v 1.9 2004/01/27 22:18:32 tobeya Exp $>
 
 =cut

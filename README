@@ -17,6 +17,10 @@ all of your flames to me.
 
 CHANGES
 
+April 9, 2004: The message_response method in SNPP.pm was fixed to return server
+codes properly.  Also, a few things in Server.pm were fixed up and documented
+better.
+
 Oct 2, 2003: Added bin/ directory with an snppd for testing, and two utilites
 for sending and checking SNPP messages.  Added methods to SNPP.pm for more
 RFC-compliant sending/checking of 2-way (level 3) messages.
@@ -39,7 +43,7 @@ COPYRIGHT
 
   © 1995-2001 Graham Barr. All rights reserved.
   © 2001-2003 Derek J. Balling. All rights reserved.
-  © 2003 Al Tobey. All rights reserved.
+  © 2003-2004 Al Tobey. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
