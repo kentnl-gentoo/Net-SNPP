@@ -18,7 +18,7 @@ use IO::Socket;
 use Net::Cmd;
 use Net::Config;
 
-$VERSION = "1.12"; # $Id: SNPP.pm,v 1.3 2001/08/20 23:37:34 dredd Exp $
+$VERSION = "1.13"; # $Id: SNPP.pm,v 1.3 2001/08/20 23:37:34 dredd Exp $
 @ISA     = qw(Net::Cmd IO::Socket::INET);
 @EXPORT  = (qw(CMD_2WAYERROR CMD_2WAYOK CMD_2WAYQUEUED), @Net::Cmd::EXPORT);
 

@@ -3,3 +3,4 @@ lib/Net/SNPP/HylaFAX.pm
 Makefile.PL
 README
 MANIFEST
+t/use.t
