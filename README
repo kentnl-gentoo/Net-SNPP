@@ -3,7 +3,7 @@ been separated out to a distribution of its own.
 
 INSTALLATION
 
-Installastion is the same as any other MakeMaker packaged distribution
+Installation is the same as any other MakeMaker packaged distribution
 from CPAN.
 
    perl Makefile.PL
@@ -18,7 +18,7 @@ However you will need to have Net::Cmd from libnet installed
 COPYRIGHT
 
   © 1995-2001 Graham Barr. All rights reserved.
-  © 2001 Derek J. Balling. All rights reserved.
+  © 2001-2003 Derek J. Balling. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

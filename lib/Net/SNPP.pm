@@ -18,7 +18,7 @@ use IO::Socket;
 use Net::Cmd;
 use Net::Config;
 
-$VERSION = "1.13"; # $Id: SNPP.pm,v 1.3 2001/08/20 23:37:34 dredd Exp $
+$VERSION = "1.14"; # $Id: SNPP.pm,v 1.5 2003/05/08 11:29:44 dredd Exp $
 @ISA     = qw(Net::Cmd IO::Socket::INET);
 @EXPORT  = (qw(CMD_2WAYERROR CMD_2WAYOK CMD_2WAYQUEUED), @Net::Cmd::EXPORT);
 
@@ -363,7 +363,10 @@ Net::SNPP - Simple Network Pager Protocol Client
 
 =head1 NOTE
 
-This module is not complete, yet !
+This module is in a maintenance mode, as I no longer have significant
+access to SNPP servers to test with. However, to the best of the
+present maintainer's knowledge, the module works just fine and has been
+used in many a production environment.
 
 =head1 DESCRIPTION
 
@@ -490,12 +493,12 @@ Derek J. Balling <dredd@megacity.org> ( original version by Graham Barr )
 
 =head1 COPYRIGHT
 
-Copyright (c) 1995-2001 Graham Barr. (c) 2001 Derek J. Balling. All rights
-reserved. This program is free software; you can redistribute it and/or
-modify it under the same terms as Perl itself.
+Copyright (c) 1995-2001 Graham Barr. (c) 2001-2003 Derek J. Balling. All 
+rights reserved. This program is free software; you can redistribute it 
+and/or modify it under the same terms as Perl itself.
 
 =for html <hr>
 
-I<$Id: SNPP.pm,v 1.3 2001/08/20 23:37:34 dredd Exp $>
+I<$Id: SNPP.pm,v 1.5 2003/05/08 11:29:44 dredd Exp $>
 
 =cut
