@@ -18,7 +18,7 @@ use IO::Socket;
 use Net::Cmd;
 use Net::Config;
 
-$VERSION = "1.14"; # $Id: SNPP.pm,v 1.5 2003/05/08 11:29:44 dredd Exp $
+$VERSION = "1.15"; # $Id: SNPP.pm,v 1.7 2003/10/03 13:57:39 tobeya Exp $
 @ISA     = qw(Net::Cmd IO::Socket::INET);
 @EXPORT  = (qw(CMD_2WAYERROR CMD_2WAYOK CMD_2WAYQUEUED), @Net::Cmd::EXPORT);
 
@@ -98,9 +98,8 @@ sub send
        $me->_PAGE($pager) || return 0
       }
     }
-
    $me->_MESS($arg{Message}) || return 0
-	if(exists $arg{Message});
+    if(exists $arg{Message});
 
    $me->hold($arg{Hold}) || return 0
 	if(exists $arg{Hold});
@@ -258,6 +257,64 @@ sub read_ack
  shift->_ACKR(@_);
 }
 
+# 4.6.7 MCREsponse <2-byte_Code> Response_Text
+sub message_response
+{
+ @_ == 3 or croak 'usage: $snpp->message_response( INT, RESPONSE )';
+ shift->_MCRE(@_);
+}
+
+# 4.6.10 MSTAtus <Message_Tag> <Pass_Code>
+sub message_status
+{
+ @_ == 3 or croak 'usage: $snpp->message_status( Message_Tag, Pass_Code )';
+ my $me = shift;
+ my @out = ();
+ $out[4] = $me->command("MSTA", @_)->response();
+ if ($out[4] == CMD_2WAYQUEUED || $out[4] == CMD_2WAYOK || $out[4] == CMD_2WAYERROR)
+  {
+   # 860 <Sequence> <Date&Time> Delivered, Awaiting Read Confirmation
+   # this regex doesn't count on every server putting the +/-GMT tag
+   # on the timestamp
+   my $msg = $me->message(); chomp( $msg );
+   #if ($msg =~ /^(\d+)\s+(\d+)(.*)\s+(.*)$/)
+   if ($msg =~ /^\s*(\d+)\s+(\d+)([+-]?\d*)\s+(.*)$/)
+    {
+     splice(@out, 0, 4, ($1,$2,$3,$4));
+    }
+    else
+    {
+     $me->debug_print( undef, "server reply for MCRE '$msg' did not match regex" );
+    }
+  }
+ return wantarray ? @out : \@out;
+}
+
+# 4.6.9 SEND (Level 3) 
+sub send_two_way
+{
+ @_ == 1 or croak 'usage: $snpp->send_two_way()';
+ my $me = shift;
+ my @out = ();
+ $out[3] = $me->command("SEND")->response();
+ # rfc1861 specifies that a 2way SEND can return 8xx or 9xx when successful
+ # i.e.
+ # 860 <Message_Tag> <Pass_Code> Delivered, Awaiting Read Ack
+ # 960 <Message_Tag> <Pass_Code> OK, Message QUEUED for Delivery
+ if ($out[3] == CMD_2WAYQUEUED || $out[3] == CMD_2WAYOK)
+  {
+   $me->message() =~ m/^(\d+)\s+(\d+)\s*(.*)$/;
+   splice(@out, 0, 3, ($1,$2,$3));
+  }
+ return wantarray ? @out : \@out;
+}
+
+sub reset
+{
+ @_ == 1 or croak 'usage: $snpp->reset()';
+ shift->_RESE();
+}
+
 sub reply_type
 {
  @_ == 2 or croak 'usage: $snpp->reply_type( TYPE_CODE )';
@@ -314,8 +371,9 @@ sub parse_response
 
 sub _PAGE { shift->command("PAGE", @_)->response()  == CMD_OK }   
 sub _MESS { shift->command("MESS", @_)->response()  == CMD_OK }   
-sub _RESE { shift->command("RESE")->response()  == CMD_OK }   
-sub _SEND { shift->command("SEND")->response()  == CMD_OK }   
+sub _RESE { shift->command("RESE")->response()  == CMD_OK }
+# level 3 SEND returns 8xx or 9xx for successful responses
+sub _SEND { shift->command("SEND")->response()  == CMD_OK }
 sub _QUIT { shift->command("QUIT")->response()  == CMD_OK }   
 sub _HELP { shift->command("HELP")->response()  == CMD_OK }   
 sub _DATA { shift->command("DATA")->response()  == CMD_MORE }   
@@ -338,6 +396,7 @@ sub _SUBJ { shift->command("SUBJ", @_)->response()  == CMD_OK }
  sub _EXPT { shift->command("EXPT", @_)->response()  == CMD_OK }   
  sub _KTAG { shift->command("KTAG", @_)->response()  == CMD_OK }   
  sub _MCRE { shift->command("MCRE", @_)->response()  == CMD_OK }   
+# MSTA here is not RFC compliant (returns 8xx or 9xx on success)
  sub _MSTA { shift->command("MSTA", @_)->response()  == CMD_OK }   
  sub _NOQU { shift->command("NOQU")->response()  == CMD_OK }   
  sub _RTYP { shift->command("RTYP", @_)->response()  == CMD_OK }   
@@ -474,7 +533,64 @@ Enable and disable the read acknowledgement notification sent by the pager.
 Change the type of reply that the page will send back. Valid options are:
 NONE, YESNO, SIMREPLY, MULTICHOICE, and TEXT. (Level 3 command)
 
+=item message_response ( INT TEXT ) (Level 3)
+
+Create message responses to deliver with the message.  INT is a 2-byte number.
+The total number of definable responses may be limited by your server.  Some
+server may need you to call reply_type() before specifying responses.
+
+=item message_status ( MSGID MSGID ) (Level 3)
+
+Get the message status from the remote server.  Use the Message_Tag and
+Pass_Code from send_two_way() as the arguments to this method, and if
+your server supports it, you should be able to retrieve the status of
+a 2-way message.  An array/arraref is returned with the following 5 elements:
+ [0] Sequence
+ [1] Date&Time
+ [2] +/- GMT (if provided by server)
+ [3] server-specific response text
+ [4] numeric response code from server (i.e. 860 or 960)
+
+=item send_two_way () (Level 3)
+
+Use this method instead of send() when working in Level 3 of the SNPP protocol.
+Before using this method, you have to build up your page using the other
+methods in the module, then use this at the very end to "submit" your page.
+An array/arrayref will be returned with the following 4 elements:
+ [0] Message_Tag
+ [1] Pass_Code
+ [2] server-specific response text
+ [3] numeric response code from server (i.e. 860 or 960)
+
+NOTE: This is only the SEND command - you have to build the page using various
+methods from this module before calling this method.
+
 =back
+
+=head1 2WAY EXAMPLES
+
+ use Net::SNPP;
+
+ my $snpp = Net::SNPP->new( "snpp.provider.com" );
+ $snpp->two_way();
+ $snpp->pager_id( 5555555555 );
+ $snpp->data( "The sky is falling!\nThe sky is falling!" );
+ $snpp->message_response( 1, "Don't Panic" );
+ $snpp->message_response( 2, "Panic!" );
+ my @result = $snpp->send_two_way();
+ $snpp->quit();
+ printf "Use these two numbers: \"%s %s\" to check message status.\n",
+        $result[0], $result[1];
+
+ __END__
+
+ use Net::SNPP;
+
+ my $snpp = Net::SNPP->new( "snpp.provider.com" );
+ my @status = $snpp->message_status( $ARGV[0], $ARGV[1] );
+ $snpp->quit;
+
+ printf "User responded with: %s\n", $status[3];
 
 =head1 EXPORTS
 
@@ -490,6 +606,7 @@ RFC1861
 =head1 AUTHOR
 
 Derek J. Balling <dredd@megacity.org> ( original version by Graham Barr )
+Al Tobey <tobeya@tobert.org> (since Oct 2003)
 
 =head1 COPYRIGHT
 
@@ -499,6 +616,6 @@ and/or modify it under the same terms as Perl itself.
 
 =for html <hr>
 
-I<$Id: SNPP.pm,v 1.5 2003/05/08 11:29:44 dredd Exp $>
+I<$Id: SNPP.pm,v 1.7 2003/10/03 13:57:39 tobeya Exp $>
 
 =cut
