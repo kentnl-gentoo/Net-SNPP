@@ -24,7 +24,11 @@ them.  Any SNPP command can be overridden or new/custom ones can be
 created using custom_command().  To disable commands you just don't
 want to deal with, use disable_command().
 
-=head1 CONSTRUCTOR
+=head1 SYNOPSIS
+
+There may be a synopsis here someday ...
+
+=head1 METHODS
 
 =over 4
 
@@ -43,8 +47,6 @@ addresses or LocalAddr to listen on only one.
     MaxErrors  => maximum number of errors before disconnecting client
     Timeout    => timeout while waiting for data (uses SIGARLM)
  );
-
-=head1 METHODS
 
 =cut
 
@@ -109,10 +111,10 @@ sub new {
             push( @$results, [ $pgr, $page ] );
         },
         validate_pager_id => sub {
-            return undef if ( $_[0] =~ /[^0-9]/ || length($_[0]) < 7 );
-            return 1;
+            return undef if ( $_[0] =~ /\D/ || length($_[0]) < 7 );
+            return $_[0];
         },
-        validate_pin => sub { 1 },
+        validate_pager_pin => sub { $_[1] || 1 },
         write_log => sub { print STDERR "@_\n" },
         create_id_and_pin => sub {
             srand(); # re-seed the pseudrandom number generator
@@ -140,6 +142,20 @@ sub client {
     my $handle = IO::Handle->new();
     accept( $handle, $_[0]->{sock} );
     return bless($handle, ref($_[0]));
+}
+
+=item ip()
+
+Return the IP address associated with a client handle.
+ printf "connection from %s", $client->ip();
+
+=cut
+
+sub ip {
+    my $remote_client = getpeername($_[0]);
+    return 'xxx.xxx.xxx.xxx' if ( !defined($remote_client) );
+    my($port,$iaddr) = unpack_sockaddr_in($remote_client);
+    return inet_ntoa($iaddr);
 }
 
 =item socket()
@@ -174,32 +190,49 @@ sub shutdown { shutdown($_[0],$_[1] || 2) }
 
 Insert a callback into Server.pm.
  $server->callback( 'process_page', \&my_function );
- $server->callback( 'validate_pgr', \&my_function );
- $server->callback( 'validate_pin', \&my_function );
+ $server->callback( 'validate_pager_id', \&my_function );
+ $server->callback( 'validate_pager_pin', \&my_function );
  $server->callback( 'write_log',    \&my_function );
  $server->callback( 'create_id_and_pin', \&my_function );
 
 =over 2
 
-=item process_page
+=item process_page( $PAGER_ID, \%PAGE, \@RESULTS )
 
-Stuff
+$PAGER_ID = [
+   0 => retval of validate_pager_id
+   1 => retval of validate_pager_pin
+]
+$PAGE = {
+   mess => $,
+   responses => [],
+}
 
-=item validate_pager_id
+=item validate_pager_id( PAGER_ID )
 
-Stuff
+The return value of this callback will be saved as the pager id
+that is passed to the process_page callback as the first list
+element of the first argument.
 
-=item validate_pager_pin
+=item validate_pager_pin( VALIDATED_PAGER_ID, PIN )
 
-Stuff
+The value returned by this callback will be saved as the second
+list element in the first argument to process_page.  
+The PAGER_ID input to this callback is the output from the
+validate_pager_id callback.
+
+NOTE: If you really care about the PIN, you must use this callback.  The default callback will return 1 if the pin is not set.
 
 =item write_log
 
-Stuff
+First argument is a Unix syslog level, such as "warning" or "info."
+The rest of the arguments are the message.  Return value is ignored.
 
 =item create_id_and_pin
 
-Stuff
+Create an ID and PIN for a 2way message.
+
+=back
 
 =cut
 
@@ -215,8 +248,13 @@ sub callback ($ $ $) {
 
 Create a custom command or override a default command in handle_client().
 The command name must be 4 letters or numbers.  The second argument is a coderef
-that should return a text command, i.e. "250 OK."  If you need MSTA or KTAG, this
+that should return a text command, i.e. "250 OK" and some "defined" value to continue the
+client loop.  +++If no value is set, the client will be disconnected after
+executing your command.+++ If you need MSTA or KTAG, this
 is the hook you need to implement them.
+ sub my_MSTA_sub {
+    return "250 OK", 1;
+ }
  $server->custom_command( "MSTA", \&my_MSTA_sub );
 
 =cut
@@ -318,8 +356,9 @@ sub handle_client ($ $) {
         ########################################################################
         # user custom commands ----------------------------------------------- #
         elsif ( exists($self->{custom}{$user_cmd}) ) {
-            my $cmdtxt = $self->{custom}{$user_cmd}->( @cmd );
+            my ($cmdtxt,$cont) = $self->{custom}{$user_cmd}->( @cmd );
             $client->command( $cmdtxt );
+            last if ( !$cont );
         }
         ########################################################################
         # 4.3 Level 1 Commands #################################################
@@ -327,9 +366,10 @@ sub handle_client ($ $) {
         # 4.3.1 PAGEr <Pager ID> --------------------------------------------- #
         # 4.5.2 PAGEr <PagerID> [Password/PIN] ------------------------------- #
         elsif ( $user_cmd eq 'PAGE' ) {
-            if ( $self->{CB}{validate_pager_id}->($cmd[0]) &&
-                 $self->{CB}{validate_pin}->($cmd[1]) ) {
-                    push( @pgrs, \@cmd );
+            my $valid_pgr_id = $self->{CB}{validate_pager_id}->($cmd[0]);
+            my $valid_pin    = $self->{CB}{validate_pager_pin}->($valid_pgr_id,$cmd[1]);
+            if ( $valid_pgr_id && $valid_pin ) {
+                    push( @pgrs, [$valid_pgr_id,$valid_pin] );
                     $client->command( "250 Pager ID Accepted" );
             }
             else {
@@ -390,7 +430,7 @@ sub handle_client ($ $) {
             }
             if ( $res && exists($page->{twoway}) ) {
                 # this callback generates the two numbers for identifying a page
-                my @tags = $self->{CB}{create_id_and_pin}->( \@pgrs );
+                my @tags = $self->{CB}{create_id_and_pin}->( \@pgrs, $page );
                 $client->command( "960 @tags OK, Message QUEUED for Delivery" );
             }
             elsif ( $res ) {

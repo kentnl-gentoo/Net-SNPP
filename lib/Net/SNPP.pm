@@ -18,7 +18,7 @@ use IO::Socket;
 use Net::Cmd;
 use Net::Config;
 
-$VERSION = "1.15"; # $Id: SNPP.pm,v 1.7 2003/10/03 13:57:39 tobeya Exp $
+$VERSION = "1.16"; # $Id: SNPP.pm,v 1.8 2003/11/29 22:10:16 tobeya Exp $
 @ISA     = qw(Net::Cmd IO::Socket::INET);
 @EXPORT  = (qw(CMD_2WAYERROR CMD_2WAYOK CMD_2WAYQUEUED), @Net::Cmd::EXPORT);
 
@@ -616,6 +616,6 @@ and/or modify it under the same terms as Perl itself.
 
 =for html <hr>
 
-I<$Id: SNPP.pm,v 1.7 2003/10/03 13:57:39 tobeya Exp $>
+I<$Id: SNPP.pm,v 1.8 2003/11/29 22:10:16 tobeya Exp $>
 
 =cut
