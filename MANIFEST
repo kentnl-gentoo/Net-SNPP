@@ -1,0 +1,5 @@
+./lib/Net/SNPP.pm
+./lib/Net/SNPP/HylaFAX.pm
+./Makefile.PL
+./README
+./MANIFEST
