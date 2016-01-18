@@ -129,6 +129,12 @@ sub new {
     return bless( $self, $class );
 }
 
+# Required by Net::Cmd, CPAN RT#111013, #110978
+sub timeout {
+    # The $_[0] is not an object reference, cannot use $self->{Timeout}
+    0;
+}
+
 =item client()
 
 Calls accept() for you and returns a client handle.  This method
